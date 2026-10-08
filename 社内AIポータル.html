@@ -187,214 +187,208 @@
   .nav-fab{width:52px;height:52px;border-radius:50%;background:var(--accent);color:#fff;border:none;font-size:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 3px 10px rgba(43,140,240,.4);margin:-24px 6px 0;flex:0 0 auto;}
 
   .toast{position:fixed;left:50%;bottom:100px;transform:translateX(-50%);background:var(--text);color:#fff;font-size:12.5px;padding:10px 18px;border-radius:999px;z-index:50;box-shadow:0 4px 14px rgba(0,0,0,.2);}
+  .toast.error{background:var(--danger);}
+
+  /* ---------- 管理画面 ---------- */
+  .field select{width:100%;border:1px solid var(--line);background:var(--accent-bg);border-radius:12px;padding:12px 14px;font-size:14px;color:var(--text);}
+  .form-error{color:var(--danger);font-size:12px;text-align:center;min-height:18px;margin:-4px 0 10px;}
+  .admin-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--line);}
+  .admin-row:last-child{border-bottom:none;}
+  .admin-row .main{flex:1;min-width:0;}
+  .admin-row .name{font-size:13.5px;font-weight:800;}
+  .admin-row .sub{font-size:11.5px;color:var(--muted);word-break:break-all;}
+  .admin-row button{flex:0 0 auto;background:var(--accent-bg);color:var(--accent-deep);border:none;border-radius:999px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;}
+  .status-off{background:var(--danger-bg);color:var(--danger);font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;margin-left:4px;}
+  .status-wait{background:#FFF6E5;color:#8a6a1f;font-size:10.5px;font-weight:800;padding:2px 8px;border-radius:999px;margin-left:4px;}
+  .edit-box{background:var(--accent-bg);border-radius:12px;padding:14px;margin:6px 0 10px;}
+  .edit-box .field input,.edit-box .field select{background:#fff;}
+  .btn-row{display:flex;gap:8px;}
+  .btn-row button{flex:1;}
+  .btn-gray{background:#fff;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:12px;font-size:14px;font-weight:700;cursor:pointer;}
+  .pw-gen{display:flex;gap:8px;}
+  .pw-gen input{flex:1;}
+  .pw-gen button{flex:0 0 auto;background:#fff;border:1px dashed var(--accent);color:var(--accent-deep);border-radius:12px;padding:0 12px;font-size:12px;font-weight:700;cursor:pointer;}
+  .issued{background:#FFF6E5;border-radius:12px;padding:14px;margin:0 20px 12px;font-size:13px;}
+  .issued b{font-family:Consolas,monospace;font-size:14px;}
+  .loading{text-align:center;color:var(--muted);font-size:13px;padding:80px 20px;}
 </style>
 </head>
 <body>
-<div id="app"></div>
+<div id="app"><div class="loading">読み込み中…</div></div>
 
 <script>
-/* ============ データの初期化 ============ */
-/* この試作は端末のブラウザ内(localStorage)だけにデータを保存する。本番運用の際は共有サーバー側の保存・認証に必ず作り直すこと。 */
-const KEY = 'ai_library_portal_v1';
-
-const STORES = [
-  {id:'shibuya', name:'渋谷店'},
-  {id:'shinjuku', name:'新宿店'},
-  {id:'ikebukuro', name:'池袋店'}
-];
-
-function storeName(id){ if(!id) return '本部'; const s = STORES.find(s=>s.id===id); return s ? s.name : '本部'; }
-
-function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
-
-function seedData(){
-  const now = Date.now();
-  const day = 24*60*60*1000;
-
-  const categories = [
-    {id:'c-kuchikomi', name:'クチコミ返信'},
-    {id:'c-kaigi', name:'会議のアジェンダ作り'},
-    {id:'c-shift', name:'シフト作成'},
-    {id:'c-hacchu', name:'発注'},
-    {id:'c-shinjin', name:'新人教育'},
-    {id:'c-mail', name:'メール/お知らせ作成'}
-  ];
-
-  const accounts = [
-    {id:'admin', password:'admin123', name:'経営サイド（見本）', role:'admin', storeId:null}
-  ];
-  STORES.forEach(s=>{
-    accounts.push({id:s.id+'-tencho', password:'pass1234', name:s.name+' 店長（見本）', role:'manager', storeId:s.id});
-    accounts.push({id:s.id+'-staff1', password:'pass1234', name:s.name+' 社員A（見本）', role:'staff', storeId:s.id});
-    accounts.push({id:s.id+'-staff2', password:'pass1234', name:s.name+' 社員B（見本）', role:'staff', storeId:s.id});
-  });
-
-  const posts = [
-    {
-      id:uid(), title:'低評価のクチコミに返す文の下書きを作る', categoryId:'c-kuchikomi', storeId:'shibuya', authorId:'shibuya-tencho',
-      steps:{want:'低い評価のクチコミに、その日のうちに返信したかった。', cant:'文章を考えるのに時間がかかり、返信が翌日以降になっていた。', why:'お詫びの言い方に迷い、毎回ゼロから書いていた。', result:'下書きが数十秒で出てきて、直しだけで返信できた。', fix:'店名と状況を先に書いてから頼むと、そのまま使える文になる。'},
-      prompt:'あなたは飲食店の店長です。次のクチコミに、お詫びと改善の予定を入れて150字程度で返信してください。／クチコミ：（貼り付け）',
-      photos:[], reactions:{like:['seed1','seed2','seed3'], tried:['seed1'], mimic:['seed1','seed2']}, views:41, pinned:true,
-      createdAt: now-1*day, isSample:true,
-      questions:[{id:uid(), userId:'shibuya-staff1', text:'星1のクチコミでも同じ頼み方で大丈夫ですか。', answer:{text:'星1のときは、先に電話で謝ってから使っています。', at: now-12*60*60*1000}, at: now-20*60*60*1000}]
-    },
-    {
-      id:uid(), title:'発注量の目安を前年と天気から出す', categoryId:'c-hacchu', storeId:'shinjuku', authorId:'shinjuku-tencho',
-      steps:{want:'発注量を毎回の勘ではなく目安をもとに決めたかった。', cant:'前年の数字と天気を見比べる時間が取れなかった。', why:'表計算を毎週手作業でまとめ直していた。', result:'前年実績と天気予報を渡すと、増減の目安を出してくれた。', fix:'前年の数字と週間天気をまとめて渡すと精度が上がる。'},
-      prompt:'あなたは飲食店の発注担当です。前年の同時期の発注数と今週の天気予報を渡すので、今週の発注量の目安を教えてください。／前年実績：（貼り付け）／天気：（貼り付け）',
-      photos:[], reactions:{like:['seed1','seed2'], tried:['seed1'], mimic:[]}, views:24, pinned:true,
-      createdAt: now-4*day, isSample:true, questions:[]
-    },
-    {
-      id:uid(), title:'希望シフトの整理をまとめて頼む', categoryId:'c-shift', storeId:'ikebukuro', authorId:'ikebukuro-tencho',
-      steps:{want:'バラバラに届く希望シフトを一つの表にまとめたかった。', cant:'手作業で表に転記するのに毎回時間がかかっていた。', why:'人によって書き方や連絡手段が違っていた。', result:'箇条書きを渡すだけで、表の形に整理してくれた。', fix:'誰の希望かを先頭に書いてもらうと整理しやすい。'},
-      prompt:'次の希望シフトの一覧を、日付ごとの表に整理してください。／希望一覧：（貼り付け）',
-      photos:[], reactions:{like:['seed1'], tried:[], mimic:['seed1']}, views:18, pinned:false,
-      createdAt: now-6*day, isSample:true, questions:[]
-    },
-    {
-      id:uid(), title:'新人が最初の3日で覚えることを整理する', categoryId:'c-shinjin', storeId:'shibuya', authorId:'shibuya-tencho',
-      steps:{want:'新人研修の初日〜3日目の内容を整理したかった。', cant:'教える内容が人によってバラバラになっていた。', why:'研修の流れを文書にする時間がなかった。', result:'3日分のチェックリストのたたき台がすぐできた。', fix:'店の営業時間や役割分担も先に伝えるとより合う内容になる。'},
-      prompt:'飲食店の新人アルバイトが最初の3日間で覚えることを、日ごとのチェックリストにしてください。',
-      photos:[], reactions:{like:['seed1','seed2'], tried:['seed1'], mimic:['seed1']}, views:15, pinned:false,
-      createdAt: now-9*day, isSample:true, questions:[]
-    },
-    {
-      id:uid(), title:'全店へのお知らせ文を店ごとに書き分ける', categoryId:'c-mail', storeId:null, authorId:'admin',
-      steps:{want:'全店共通のお知らせを、店舗ごとの事情に合わせて出したかった。', cant:'店舗数ぶん書き直すのに時間がかかっていた。', why:'共通部分と店舗ごとの違いを毎回考え直していた。', result:'共通文と店舗名を渡すだけで店舗別に書き分けてくれた。', fix:'共通で伝えたいことを先に箇条書きにしておくとよい。'},
-      prompt:'次のお知らせ内容を、渋谷店・新宿店・池袋店それぞれ向けに、店名を入れて書き分けてください。／お知らせ内容：（貼り付け）',
-      photos:[], reactions:{like:['seed1'], tried:[], mimic:[]}, views:11, pinned:false,
-      createdAt: now-11*day, isSample:true, questions:[]
-    }
-  ];
-
-  return {
-    stores: STORES,
-    categories,
-    accounts,
-    posts,
-    saved: {},
-    lastSeen: {},
-    session: {currentUserId:null}
-  };
+/* ============ サーバーとのやりとり ============ */
+/* データとログインは Cloudflare（functions/api と D1 データベース）で管理する */
+async function api(method, path, body){
+  const opt = {method, headers:{}, credentials:'same-origin'};
+  if(method!=='GET'){ opt.headers['Content-Type']='application/json'; opt.body=JSON.stringify(body||{}); }
+  let res;
+  try{ res = await fetch('/api'+path, opt); }
+  catch(e){ throw new Error('通信できませんでした。電波の状態を確認してください'); }
+  const out = await res.json().catch(()=>({}));
+  if(res.status===401 && path!=='/login'){ data=null; ui.screen='login'; render(); }
+  if(!res.ok) throw new Error(out.error || 'エラーが起きました');
+  return out;
 }
 
-function load(){
-  try{
-    const raw = localStorage.getItem(KEY);
-    return raw ? JSON.parse(raw) : null;
-  }catch(e){ return null; }
-}
-function save(){ localStorage.setItem(KEY, JSON.stringify(data)); }
-
-let data = load() || seedData();
-if(!data.session) data.session = {currentUserId:null};
-if(!data.saved) data.saved = {};
-if(!data.lastSeen) data.lastSeen = {};
-save();
-
-/* ============ 画面の状態 ============ */
+let data = null;
 let ui = {
-  screen:'login', postId:null, editingId:null,
+  screen:'loading', postId:null, editingId:null,
   sort:'new', catFilter:'all', storeFilter:'all', query:'',
-  homeBanner:false, loginError:null, toast:null, formDraft:null
+  homeBanner:false, formDraft:null, busy:false,
+  adminUsers:null, adminEditing:null, issued:null
 };
 
-function currentUser(){ return data.accounts.find(a=>a.id===data.session.currentUserId) || null; }
+async function refresh(){ data = await api('GET','/data'); }
+
+async function boot(){
+  try{
+    const st = await api('GET','/status');
+    if(st.setupNeeded){ ui.screen='setup'; render(); return; }
+    await refresh();
+    if(data.me.mustChange){ ui.screen='changepw'; render(); return; }
+    goHome();
+  }catch(e){
+    if(ui.screen==='loading'){ ui.screen='login'; render(); }
+  }
+}
+
+/* 連打防止つきで操作を実行する */
+async function run(fn){
+  if(ui.busy) return;
+  ui.busy = true;
+  try{ await fn(); }
+  catch(e){ showError(e.message); }
+  finally{ ui.busy = false; }
+}
+
+function showToast(text, isError){
+  const old = document.querySelector('.toast'); if(old) old.remove();
+  const el = document.createElement('div');
+  el.className = 'toast'+(isError?' error':''); el.textContent = text;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), isError?3500:1800);
+}
+function showError(text){
+  const el = document.getElementById('form-error');
+  if(el) el.textContent = text; else showToast(text, true);
+}
+
+/* ============ 便利関数 ============ */
+function me(){ return data ? data.me : null; }
+function storeName(id){ if(!id) return '本部'; const s = data.stores.find(s=>s.id===id); return s ? s.name : '本部'; }
 function findPost(id){ return data.posts.find(p=>p.id===id); }
 function findCategory(id){ return data.categories.find(c=>c.id===id); }
+function authorName(post){ if(!post.authorId) return '見本'; return accountName(post.authorId); }
+function accountName(id){ const a = data.accounts.find(a=>a.id===id); return a ? a.name : '（削除されたアカウント）'; }
+function roleName(r){ return r==='admin'?'経営サイド':r==='manager'?'店長':'社員'; }
 function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function fmtDate(ts){ const d=new Date(ts); return (d.getMonth()+1)+'月'+d.getDate()+'日'; }
+function val(id){ const el=document.getElementById(id); return el ? el.value : ''; }
 
 /* ============ 画面遷移 ============ */
 function goHome(){
-  const user = currentUser();
+  const user = me();
   if(user){
-    const last = data.lastSeen[user.id] || 0;
-    ui.homeBanner = data.posts.some(p=>p.createdAt>last);
-    data.lastSeen[user.id] = Date.now();
-    save();
+    ui.homeBanner = data.posts.some(p=>p.createdAt>data.lastSeen && p.authorId!==user.id) && data.lastSeen>0;
+    data.lastSeen = Date.now();
+    api('POST','/seen').catch(()=>{});
   }
   ui.screen='home'; ui.postId=null; ui.editingId=null;
-  render();
+  render(); window.scrollTo(0,0);
 }
-function goCategories(){ ui.screen='categories'; render(); }
-function goSaved(){ ui.screen='saved'; render(); }
-function goMyPage(){ ui.screen='mypage'; render(); }
+function goCategories(){ ui.screen='categories'; render(); window.scrollTo(0,0); }
+function goSaved(){ ui.screen='saved'; render(); window.scrollTo(0,0); }
+function goMyPage(){ ui.screen='mypage'; render(); window.scrollTo(0,0); }
+function goChangePw(){ ui.screen='changepw'; render(); }
 function goStats(){
-  const user = currentUser();
-  if(!user || user.role!=='admin'){ goHome(); return; }
-  ui.screen='stats'; render();
+  if(me().role!=='admin'){ goHome(); return; }
+  ui.screen='stats'; render(); window.scrollTo(0,0);
+}
+function goAdmin(){
+  if(me().role!=='admin'){ goHome(); return; }
+  ui.screen='admin'; ui.adminEditing=null; ui.issued=null; render(); window.scrollTo(0,0);
+  loadAdminUsers();
 }
 function openDetail(id){
   const post = findPost(id);
-  if(post){ post.views = (post.views||0)+1; save(); }
-  ui.screen='detail'; ui.postId=id; render();
+  if(post){ post.views = (post.views||0)+1; api('POST','/posts/'+id+'/view').catch(()=>{}); }
+  ui.screen='detail'; ui.postId=id; render(); window.scrollTo(0,0);
 }
 function openCategoryFilter(catId){ ui.catFilter=catId; goHome(); }
 function openNewForm(){
-  const user = currentUser();
-  if(!user || user.role==='staff') return;
+  if(me().role==='staff') return;
   ui.editingId=null;
-  ui.formDraft = {categoryId:null, steps:{want:'',cant:'',why:'',result:'',fix:''}, prompt:'', photos:[], pinned:false, showAddCategory:false};
-  ui.screen='form'; render();
+  ui.formDraft = {title:'', categoryId:null, steps:{want:'',cant:'',why:'',result:'',fix:''}, prompt:'', photos:[], pinned:false, showAddCategory:false};
+  ui.screen='form'; render(); window.scrollTo(0,0);
 }
 function openEditForm(id){
   const post = findPost(id);
   if(!post) return;
   ui.editingId=id;
   ui.formDraft = {categoryId:post.categoryId, steps:{...post.steps}, prompt:post.prompt, photos:[...post.photos], pinned:!!post.pinned, showAddCategory:false, title:post.title};
-  ui.screen='form'; render();
+  ui.screen='form'; render(); window.scrollTo(0,0);
 }
 function closeForm(){ goHome(); }
 
-/* ============ ログイン ============ */
+/* ============ ログイン・初期設定・パスワード ============ */
 function login(){
-  const id = document.getElementById('login-id').value.trim();
-  const pw = document.getElementById('login-pw').value;
-  const acc = data.accounts.find(a=>a.id===id && a.password===pw);
-  if(!acc){ ui.loginError='IDまたはパスワードが違います。'; render(); return; }
-  data.session.currentUserId = acc.id;
-  save();
-  ui.loginError = null;
-  goHome();
+  run(async()=>{
+    const loginId = val('login-id').trim(), password = val('login-pw');
+    if(!loginId || !password){ showError('IDとパスワードを入れてください'); return; }
+    await api('POST','/login',{loginId, password});
+    await refresh();
+    if(data.me.mustChange){ ui.screen='changepw'; render(); return; }
+    goHome();
+  });
 }
-function logout(){ data.session.currentUserId=null; save(); ui.screen='login'; render(); }
+function logout(){
+  run(async()=>{
+    await api('POST','/logout');
+    data=null; ui.screen='login'; ui.catFilter='all'; ui.storeFilter='all'; ui.query='';
+    render();
+  });
+}
+function submitSetup(){
+  run(async()=>{
+    const pw = val('setup-pw');
+    if(pw!==val('setup-pw2')){ showError('確認用のパスワードが一致しません'); return; }
+    await api('POST','/setup',{setupKey:val('setup-key'), loginId:val('setup-id'), name:val('setup-name'), password:pw});
+    await refresh();
+    showToast('初期設定が完了しました');
+    goHome();
+  });
+}
+function submitChangePw(){
+  run(async()=>{
+    const next = val('pw-next');
+    if(next!==val('pw-next2')){ showError('確認用のパスワードが一致しません'); return; }
+    await api('POST','/password',{current:val('pw-current'), next});
+    await refresh();
+    showToast('パスワードを変更しました');
+    goHome();
+  });
+}
 
 /* ============ 投稿の操作 ============ */
 function canEdit(post){
-  const user = currentUser();
-  if(!user) return false;
-  return user.role==='admin' || user.id===post.authorId;
+  const user = me();
+  return !!user && (user.role==='admin' || user.id===post.authorId);
 }
 function toggleReaction(postId, type){
-  const post = findPost(postId); const user = currentUser();
-  if(!post || !user) return;
-  const arr = post.reactions[type];
-  const idx = arr.indexOf(user.id);
-  if(idx>=0) arr.splice(idx,1); else arr.push(user.id);
-  save(); render();
+  run(async()=>{ await api('POST','/posts/'+postId+'/react',{type}); await refresh(); render(); });
 }
 function toggleSaved(postId){
-  const user = currentUser(); if(!user) return;
-  data.saved[user.id] = data.saved[user.id] || [];
-  const arr = data.saved[user.id];
-  const idx = arr.indexOf(postId);
-  if(idx>=0) arr.splice(idx,1); else arr.push(postId);
-  save(); render();
+  run(async()=>{ await api('POST','/posts/'+postId+'/save'); await refresh(); render(); });
 }
-function isSaved(postId){
-  const user = currentUser(); if(!user) return false;
-  return (data.saved[user.id]||[]).includes(postId);
-}
+function isSaved(postId){ return data.saved.includes(postId); }
 function deletePost(id){
   if(!confirm('この投稿を削除します。よろしいですか？')) return;
-  data.posts = data.posts.filter(p=>p.id!==id);
-  save(); goHome();
+  run(async()=>{ await api('DELETE','/posts/'+id); await refresh(); showToast('削除しました'); goHome(); });
 }
 function copyPrompt(id){
   const post = findPost(id); if(!post) return;
-  const done = () => { ui.toast='プロンプトをコピーしました'; render(); setTimeout(()=>{ui.toast=null; render();}, 1600); };
+  const done = () => showToast('プロンプトをコピーしました');
   if(navigator.clipboard && navigator.clipboard.writeText){
     navigator.clipboard.writeText(post.prompt).then(done).catch(()=>fallbackCopy(post.prompt, done));
   } else { fallbackCopy(post.prompt, done); }
@@ -405,30 +399,25 @@ function fallbackCopy(text, done){
   document.body.removeChild(ta); done();
 }
 function submitQuestion(postId){
-  const el = document.getElementById('ask-input'); if(!el) return;
-  const text = el.value.trim(); if(!text) return;
-  const post = findPost(postId); const user = currentUser();
-  post.questions.push({id:uid(), userId:user.id, text, answer:null, at:Date.now()});
-  save(); render();
+  const text = val('ask-input').trim(); if(!text) return;
+  run(async()=>{ await api('POST','/posts/'+postId+'/questions',{text}); await refresh(); render(); });
 }
-function submitAnswer(postId, qid){
-  const el = document.getElementById('answer-input-'+qid); if(!el) return;
-  const text = el.value.trim(); if(!text) return;
-  const post = findPost(postId); const q = post.questions.find(q=>q.id===qid);
-  q.answer = {text, at:Date.now()};
-  save(); render();
+function submitAnswer(qid){
+  const text = val('answer-input-'+qid).trim(); if(!text) return;
+  run(async()=>{ await api('POST','/questions/'+qid+'/answer',{text}); await refresh(); render(); });
 }
 
 /* ============ フォーム ============ */
 function setFormCategory(catId){ ui.formDraft.categoryId=catId; render(); }
 function toggleAddCategory(){ ui.formDraft.showAddCategory=!ui.formDraft.showAddCategory; render(); }
 function addCategory(){
-  const el = document.getElementById('new-category-input'); if(!el) return;
-  const name = el.value.trim(); if(!name) return;
-  const cat = {id:uid(), name};
-  data.categories.push(cat); save();
-  ui.formDraft.categoryId = cat.id; ui.formDraft.showAddCategory=false;
-  render();
+  const name = val('new-category-input').trim(); if(!name) return;
+  run(async()=>{
+    const r = await api('POST','/categories',{name});
+    await refresh();
+    ui.formDraft.categoryId = r.id; ui.formDraft.showAddCategory=false;
+    render();
+  });
 }
 function onStepInput(field, value){ ui.formDraft.steps[field]=value; }
 function onPromptInput(value){ ui.formDraft.prompt=value; }
@@ -436,12 +425,12 @@ function onTitleInput(value){ ui.formDraft.title=value; }
 function togglePinDraft(){ ui.formDraft.pinned=!ui.formDraft.pinned; render(); }
 function removePhoto(idx){ ui.formDraft.photos.splice(idx,1); render(); }
 function resizeImage(file){
-  return new Promise(resolve=>{
+  return new Promise((resolve, reject)=>{
     const reader = new FileReader();
     reader.onload = e => {
       const img = new Image();
       img.onload = () => {
-        const maxDim = 800;
+        const maxDim = 1000;
         let w=img.width, h=img.height;
         if(w>maxDim || h>maxDim){
           if(w>=h){ h=Math.round(h*maxDim/w); w=maxDim; } else { w=Math.round(w*maxDim/h); h=maxDim; }
@@ -449,8 +438,9 @@ function resizeImage(file){
         const canvas = document.createElement('canvas');
         canvas.width=w; canvas.height=h;
         canvas.getContext('2d').drawImage(img,0,0,w,h);
-        resolve(canvas.toDataURL('image/jpeg',0.7));
+        resolve(canvas.toDataURL('image/jpeg',0.75));
       };
+      img.onerror = () => reject(new Error('この写真は読み込めませんでした'));
       img.src = e.target.result;
     };
     reader.readAsDataURL(file);
@@ -463,30 +453,65 @@ function onPhotoSelected(inputEl){
   Promise.all(files.map(resizeImage)).then(results=>{
     ui.formDraft.photos.push(...results);
     render();
-  });
+  }).catch(e=>showToast(e.message, true));
 }
 function submitForm(){
-  const titleEl = document.getElementById('title-input');
-  const title = titleEl ? titleEl.value.trim() : '';
-  if(!title || !ui.formDraft.categoryId){ ui.formDraft.showError=true; render(); return; }
-  const user = currentUser();
-  if(ui.editingId){
-    const post = findPost(ui.editingId);
-    post.title = title;
-    post.categoryId = ui.formDraft.categoryId;
-    post.steps = {...ui.formDraft.steps};
-    post.prompt = ui.formDraft.prompt;
-    post.photos = [...ui.formDraft.photos];
-    if(user.role==='admin') post.pinned = !!ui.formDraft.pinned;
-  } else {
-    data.posts.unshift({
-      id:uid(), title, categoryId:ui.formDraft.categoryId, storeId:user.storeId||null, authorId:user.id,
-      steps:{...ui.formDraft.steps}, prompt:ui.formDraft.prompt, photos:[...ui.formDraft.photos],
-      reactions:{like:[],tried:[],mimic:[]}, views:0, pinned: user.role==='admin' ? !!ui.formDraft.pinned : false,
-      createdAt:Date.now(), isSample:false, questions:[]
-    });
-  }
-  save(); goHome();
+  const d = ui.formDraft;
+  const title = (d.title||'').trim();
+  if(!title || !d.categoryId){ d.showError=true; render(); return; }
+  run(async()=>{
+    const body = {title, categoryId:d.categoryId, steps:d.steps, prompt:d.prompt, photos:d.photos, pinned:d.pinned};
+    if(ui.editingId) await api('PUT','/posts/'+ui.editingId, body);
+    else await api('POST','/posts', body);
+    await refresh();
+    showToast(ui.editingId?'更新しました':'投稿しました');
+    goHome();
+  });
+}
+
+/* ============ 管理（経営サイドのみ） ============ */
+async function loadAdminUsers(){
+  try{ ui.adminUsers = (await api('GET','/admin/users')).users; render(); }
+  catch(e){ showToast(e.message, true); }
+}
+function genPassword(targetId){
+  const chars = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const arr = crypto.getRandomValues(new Uint32Array(10));
+  document.getElementById(targetId).value = Array.from(arr, n=>chars[n%chars.length]).join('');
+}
+function addUser(){
+  run(async()=>{
+    const body = {loginId:val('nu-id').trim(), name:val('nu-name'), role:val('nu-role'), storeId:val('nu-store'), password:val('nu-pw')};
+    await api('POST','/admin/users', body);
+    ui.issued = {name:body.name, loginId:body.loginId, password:body.password};
+    await refresh();
+    await loadAdminUsers();
+    window.scrollTo(0,0);
+  });
+}
+function startEditUser(id){ ui.adminEditing = ui.adminEditing===id ? null : id; render(); }
+function saveUser(id){
+  run(async()=>{
+    const pw = val('eu-pw');
+    const u = ui.adminUsers.find(x=>x.id===id);
+    await api('PUT','/admin/users/'+id, {name:val('eu-name'), role:val('eu-role'), storeId:val('eu-store'), active:document.getElementById('eu-active').checked, password:pw||undefined});
+    ui.issued = pw ? {name:val('eu-name'), loginId:u.loginId, password:pw, reset:true} : null;
+    ui.adminEditing = null;
+    await refresh();
+    await loadAdminUsers();
+    showToast('保存しました');
+    if(pw) window.scrollTo(0,0);
+  });
+}
+function addStore(){
+  const name = val('new-store-input').trim(); if(!name) return;
+  run(async()=>{ await api('POST','/admin/stores',{name}); await refresh(); render(); showToast('店舗を追加しました'); });
+}
+function renameStore(id){
+  const s = data.stores.find(s=>s.id===id);
+  const name = prompt('新しい店舗名を入れてください', s ? s.name : '');
+  if(!name || !name.trim()) return;
+  run(async()=>{ await api('PUT','/admin/stores/'+id,{name}); await refresh(); render(); showToast('店舗名を変更しました'); });
 }
 
 /* ============ フィルタ・並べ替え ============ */
@@ -499,7 +524,8 @@ function filteredPosts(){
   let list = data.posts.slice();
   if(ui.catFilter!=='all') list = list.filter(p=>p.categoryId===ui.catFilter);
   if(ui.storeFilter!=='all') list = list.filter(p=>p.storeId===ui.storeFilter);
-  if(ui.query.trim()) list = list.filter(p=>p.title.includes(ui.query.trim()));
+  const q = ui.query.trim();
+  if(q) list = list.filter(p=>(p.title+' '+p.prompt+' '+Object.values(p.steps).join(' ')).includes(q));
   if(ui.sort==='new') list.sort((a,b)=>b.createdAt-a.createdAt);
   else if(ui.sort==='helpful') list.sort((a,b)=>reactionTotal(b)-reactionTotal(a));
   else if(ui.sort==='views') list.sort((a,b)=>b.views-a.views);
@@ -516,7 +542,7 @@ function computeStats(){
   });
   const topViewed = data.posts.slice().sort((a,b)=>b.views-a.views).slice(0,3);
   const byCategory = data.categories.map(c=>({name:c.name, count:data.posts.filter(p=>p.categoryId===c.id).length}));
-  const byStore = STORES.map(s=>({name:s.name, count:data.posts.filter(p=>p.storeId===s.id).length}));
+  const byStore = data.stores.map(s=>({name:s.name, count:data.posts.filter(p=>p.storeId===s.id).length}));
   return {monthCount:monthPosts.length, totalCount:data.posts.length, topViewed, byCategory, byStore};
 }
 
@@ -541,38 +567,60 @@ function render(){
 }
 
 function buildScreen(){
-  if(ui.screen==='login' || !currentUser()) return renderLogin();
+  if(ui.screen==='loading') return '<div class="loading">読み込み中…</div>';
+  if(ui.screen==='setup') return renderSetup();
+  if(!me()) return renderLogin();
+  if(ui.screen==='changepw' || me().mustChange) return renderChangePw();
   const body = {
     home: renderHome, detail: renderDetail, form: renderForm,
-    categories: renderCategories, stats: renderStats, saved: renderSaved, mypage: renderMyPage
+    categories: renderCategories, stats: renderStats, saved: renderSaved, mypage: renderMyPage, admin: renderAdmin
   }[ui.screen] || renderHome;
-  return '<div class="shell">' + body() + renderBottomNav() + (ui.toast?renderToast():'') + '</div>';
+  return '<div class="shell">' + body() + renderBottomNav() + '</div>';
 }
 
-function renderToast(){ return '<div class="toast">'+esc(ui.toast)+'</div>'; }
-
 function renderLogin(){
-  const demoRows = data.accounts.map(a=>
-    '<tr><td>'+esc(a.name)+'</td><td>'+esc(a.id)+'</td><td>'+esc(a.password)+'</td></tr>'
-  ).join('');
   return '<div class="login-wrap"><div class="login-card">'
     + '<div class="login-title">AI活用ライブラリー</div>'
-    + '<div class="login-sub">一人ひとり別のIDでログインします</div>'
-    + '<div class="notice">試作版：投稿はこの端末の中だけに保存されます。他の端末には反映されません。</div>'
-    + (ui.loginError ? '<div class="login-error">'+esc(ui.loginError)+'</div>' : '')
-    + '<div class="field"><label>ID</label><input id="login-id" type="text" placeholder="配布されたID"></div>'
-    + '<div class="field"><label>パスワード</label><input id="login-pw" type="password" placeholder="パスワード" onkeydown="if(event.key===\'Enter\')login()"></div>'
+    + '<div class="login-sub">配布されたIDとパスワードでログインします</div>'
+    + '<div class="form-error" id="form-error"></div>'
+    + '<div class="field"><label>ID</label><input id="login-id" type="text" autocomplete="username" autocapitalize="off" placeholder="配布されたID"></div>'
+    + '<div class="field"><label>パスワード</label><input id="login-pw" type="password" autocomplete="current-password" placeholder="パスワード" onkeydown="if(event.key===\'Enter\')login()"></div>'
     + '<button class="btn-primary" onclick="login()">ログイン</button>'
-    + '<details class="demo"><summary>お試し用アカウント（見本）を見る</summary>'
-    + '<table class="demo-table"><tr><th>名前</th><th>ID</th><th>パスワード</th></tr>'+demoRows+'</table>'
-    + '</details>'
+    + '<div class="form-hint" style="margin-top:14px;">IDやパスワードが分からないときは、経営サイドに確認してください</div>'
+    + '</div></div>';
+}
+
+function renderSetup(){
+  return '<div class="login-wrap"><div class="login-card">'
+    + '<div class="login-title">はじめの設定</div>'
+    + '<div class="login-sub">最初の経営サイドのアカウントを作ります</div>'
+    + '<div class="form-error" id="form-error"></div>'
+    + '<div class="field"><label>初期設定キー</label><input id="setup-key" type="text" autocapitalize="off" autocomplete="off" placeholder="配布された初期設定キー"></div>'
+    + '<div class="field"><label>ID（半角英数字）</label><input id="setup-id" type="text" autocapitalize="off" autocomplete="username" placeholder="例：admin"></div>'
+    + '<div class="field"><label>名前（画面に表示されます）</label><input id="setup-name" type="text" placeholder="例：経営サイド 山田"></div>'
+    + '<div class="field"><label>パスワード（8文字以上）</label><input id="setup-pw" type="password" autocomplete="new-password"></div>'
+    + '<div class="field"><label>パスワード（確認のためもう一度）</label><input id="setup-pw2" type="password" autocomplete="new-password"></div>'
+    + '<button class="btn-primary" onclick="submitSetup()">設定してはじめる</button>'
+    + '</div></div>';
+}
+
+function renderChangePw(){
+  const forced = me().mustChange;
+  return '<div class="login-wrap"><div class="login-card">'
+    + '<div class="login-title">パスワードの変更</div>'
+    + '<div class="login-sub">'+(forced?'はじめに、自分だけのパスワードに変更してください':esc(me().name)+' さんのパスワードを変更します')+'</div>'
+    + '<div class="form-error" id="form-error"></div>'
+    + '<div class="field"><label>今のパスワード'+(forced?'（配布されたもの）':'')+'</label><input id="pw-current" type="password" autocomplete="current-password"></div>'
+    + '<div class="field"><label>新しいパスワード（8文字以上）</label><input id="pw-next" type="password" autocomplete="new-password"></div>'
+    + '<div class="field"><label>新しいパスワード（確認のためもう一度）</label><input id="pw-next2" type="password" autocomplete="new-password"></div>'
+    + '<button class="btn-primary" onclick="submitChangePw()">変更する</button>'
+    + '<div style="margin-top:12px;">'+(forced?'<button class="btn-gray" style="width:100%;" onclick="logout()">ログアウト</button>':'<button class="btn-gray" style="width:100%;" onclick="goMyPage()">やめる</button>')+'</div>'
     + '</div></div>';
 }
 
 function renderBottomNav(){
   const active = ui.screen;
-  const user = currentUser();
-  const canPost = user && user.role!=='staff';
+  const canPost = me().role!=='staff';
   const item = (key, icon, label, onclick) =>
     '<button class="nav-item '+(active===key?'active':'')+'" onclick="'+onclick+'"><span class="icon">'+icon+'</span><span>'+label+'</span></button>';
   return '<div class="bottomnav">'
@@ -584,13 +632,23 @@ function renderBottomNav(){
     + '</div>';
 }
 
+function postCard(p){
+  return '<div class="post-card" onclick="openDetail(\''+p.id+'\')">'
+    + '<div class="post-title">'+esc(p.title)+(p.isSample?' <span class="sample-badge">見本</span>':'')+'</div>'
+    + '<div class="post-meta"><span class="cat-chip">'+esc(findCategory(p.categoryId)?.name||'')+'</span>'
+    + '<span class="store-tag">'+esc(storeName(p.storeId))+'</span>'
+    + '<span class="author-tag">'+esc(authorName(p))+'</span></div>'
+    + '<div class="divider"></div>'
+    + '<div class="post-footer"><span>いいね '+p.reactions.like.length+'　閲覧 '+p.views+'</span><span>'+fmtDate(p.createdAt)+'</span></div>'
+    + '</div>';
+}
+
 function renderHome(){
-  const user = currentUser();
   const cats = data.categories;
   const catChips = ['<button class="chip '+(ui.catFilter==='all'?'active':'')+'" onclick="setCatFilter(\'all\')">すべて</button>']
     .concat(cats.map(c=>'<button class="chip '+(ui.catFilter===c.id?'active':'')+'" onclick="setCatFilter(\''+c.id+'\')">'+esc(c.name)+'</button>')).join('');
   const storeChips = ['<button class="chip store '+(ui.storeFilter==='all'?'active':'')+'" onclick="setStoreFilter(\'all\')">すべての店舗</button>']
-    .concat(STORES.map(s=>'<button class="chip store '+(ui.storeFilter===s.id?'active':'')+'" onclick="setStoreFilter(\''+s.id+'\')">'+esc(s.name)+'</button>')).join('');
+    .concat(data.stores.map(s=>'<button class="chip store '+(ui.storeFilter===s.id?'active':'')+'" onclick="setStoreFilter(\''+s.id+'\')">'+esc(s.name)+'</button>')).join('');
 
   const pinned = data.posts.filter(p=>p.pinned);
   const pinnedHtml = pinned.length ? (
@@ -606,23 +664,11 @@ function renderHome(){
 
   const list = filteredPosts();
   const sortTab = (key,label) => '<button class="sort-tab '+(ui.sort===key?'active':'')+'" onclick="setSort(\''+key+'\')">'+label+'</button>';
-
-  const cardsHtml = list.length ? list.map(p=>{
-    const author = data.accounts.find(a=>a.id===p.authorId);
-    return '<div class="post-card" onclick="openDetail(\''+p.id+'\')">'
-      + '<div class="post-title">'+esc(p.title)+(p.isSample?' <span class="sample-badge">見本</span>':'')+'</div>'
-      + '<div class="post-meta"><span class="cat-chip">'+esc(findCategory(p.categoryId)?.name||'')+'</span>'
-      + '<span class="store-tag">'+esc(storeName(p.storeId))+'</span>'
-      + '<span class="author-tag">'+esc(author?author.name:'')+'</span></div>'
-      + '<div class="divider"></div>'
-      + '<div class="post-footer"><span>いいね '+p.reactions.like.length+'　閲覧 '+p.views+'</span><span>'+fmtDate(p.createdAt)+'</span></div>'
-      + '</div>';
-  }).join('') : '<div class="empty">条件に合うお手本が見つかりませんでした。</div>';
+  const cardsHtml = list.length ? list.map(postCard).join('') : '<div class="empty">条件に合うお手本が見つかりませんでした。</div>';
 
   return '<div class="topbar">'
     + '<div class="rowtop"><div><h1>AI活用ライブラリー</h1><p class="sub">みんなのうまくいった使い方</p></div>'
     + '<button class="logout-btn" onclick="logout()">出る</button></div>'
-    + '<div class="mini-notice">試作版：この端末だけにデータが保存されます</div>'
     + '</div>'
     + '<div class="searchbar"><input type="text" id="search-input" placeholder="お手本を検索" value="'+esc(ui.query)+'" oninput="onSearchInput(this.value)"></div>'
     + '<div class="chiprow">'+catChips+'</div>'
@@ -637,9 +683,8 @@ function renderHome(){
 
 function renderDetail(){
   const post = findPost(ui.postId);
-  if(!post) { goHome(); return ''; }
-  const user = currentUser();
-  const author = data.accounts.find(a=>a.id===post.authorId);
+  if(!post){ setTimeout(goHome); return ''; }
+  const user = me();
   const cat = findCategory(post.categoryId);
 
   const steps = [
@@ -655,26 +700,25 @@ function renderDetail(){
   ).join('');
 
   const photosHtml = post.photos.length
-    ? '<div class="block"><h3>写真</h3><div class="photo-row">'+post.photos.map(p=>'<img src="'+p+'">').join('')+'</div></div>'
+    ? '<div class="block"><h3>写真</h3><div class="photo-row">'+post.photos.map(p=>'<a href="'+esc(p)+'" target="_blank"><img src="'+esc(p)+'"></a>').join('')+'</div></div>'
     : '';
 
   const reactionLabels = {like:'いいね', tried:'試した', mimic:'真似したい'};
   const reactionsHtml = '<div class="block"><h3>リアクション</h3><div class="reaction-row">'
     + Object.keys(reactionLabels).map(type=>{
-      const active = user && post.reactions[type].includes(user.id);
+      const active = post.reactions[type].includes(user.id);
       return '<button class="reaction-btn '+(active?'active':'')+'" onclick="toggleReaction(\''+post.id+'\',\''+type+'\')">'+reactionLabels[type]+'<span class="n">'+post.reactions[type].length+'</span></button>';
     }).join('') + '</div></div>';
 
   const qaHtml = '<div class="block"><h3>質問と回答（'+post.questions.length+'件）</h3>'
     + post.questions.map(q=>{
-      const asker = data.accounts.find(a=>a.id===q.userId);
       let answerHtml = '';
       if(q.answer){
-        answerHtml = '<div class="qa-a"><span class="who">'+esc(author?author.name:'')+'・投稿者</span>'+esc(q.answer.text)+'</div>';
-      } else if(user && user.id===post.authorId){
-        answerHtml = '<div class="answer-row"><input id="answer-input-'+q.id+'" type="text" placeholder="回答を書く"><button onclick="submitAnswer(\''+post.id+'\',\''+q.id+'\')">送信</button></div>';
+        answerHtml = '<div class="qa-a"><span class="who">'+esc(authorName(post))+'・投稿者</span>'+esc(q.answer.text)+'</div>';
+      } else if(canEdit(post)){
+        answerHtml = '<div class="answer-row"><input id="answer-input-'+q.id+'" type="text" placeholder="回答を書く"><button onclick="submitAnswer(\''+q.id+'\')">送信</button></div>';
       }
-      return '<div class="qa-item"><div class="qa-q"><span class="who">'+esc(asker?asker.name:'')+'</span>'+esc(q.text)+'</div>'+answerHtml+'</div>';
+      return '<div class="qa-item"><div class="qa-q"><span class="who">'+esc(accountName(q.userId))+'</span>'+esc(q.text)+'</div>'+answerHtml+'</div>';
     }).join('')
     + '<div class="ask-row"><input id="ask-input" type="text" placeholder="分からないところを書いてください"><button onclick="submitQuestion(\''+post.id+'\')">送信する</button></div>'
     + '</div>';
@@ -688,7 +732,7 @@ function renderDetail(){
 
   return '<div class="topbar"><button class="back-btn" onclick="goHome()">←</button></div>'
     + '<div class="detail-title">'+esc(post.title)+(post.isSample?' <span class="sample-badge">見本</span>':'')+'</div>'
-    + '<div class="detail-meta"><span class="cat-chip">'+esc(cat?cat.name:'')+'</span><span>'+esc(storeName(post.storeId))+'</span><span>'+esc(author?author.name:'')+'</span><span>閲覧 '+post.views+'</span></div>'
+    + '<div class="detail-meta"><span class="cat-chip">'+esc(cat?cat.name:'')+'</span><span>'+esc(storeName(post.storeId))+'</span><span>'+esc(authorName(post))+'</span><span>閲覧 '+post.views+'</span></div>'
     + stepsHtml
     + '<div class="block"><h3>使ったプロンプト<button class="btn-copy" onclick="copyPrompt(\''+post.id+'\')">コピーする</button></h3><div class="prompt-box">'+esc(post.prompt||'（未入力）')+'</div></div>'
     + photosHtml
@@ -700,7 +744,7 @@ function renderDetail(){
 }
 
 function renderForm(){
-  const user = currentUser();
+  const user = me();
   const draft = ui.formDraft;
   const catChips = data.categories.map(c=>
     '<button class="chip '+(draft.categoryId===c.id?'active':'')+'" onclick="setFormCategory(\''+c.id+'\')" type="button">'+esc(c.name)+'</button>'
@@ -719,15 +763,13 @@ function renderForm(){
   ).join('');
 
   const photosHtml = '<div class="photo-row">'
-    + draft.photos.map((p,i)=>'<div class="photo-thumb"><img src="'+p+'"><button class="photo-remove" onclick="removePhoto('+i+')">×</button></div>').join('')
+    + draft.photos.map((p,i)=>'<div class="photo-thumb"><img src="'+esc(p)+'"><button class="photo-remove" onclick="removePhoto('+i+')">×</button></div>').join('')
     + (draft.photos.length<3 ? '<div class="photo-add">＋<input type="file" accept="image/*" onchange="onPhotoSelected(this)"></div>' : '')
     + '</div>';
 
   const pinUi = user.role==='admin'
     ? '<div class="checkbox-row"><input type="checkbox" id="pin-checkbox" '+(draft.pinned?'checked':'')+' onchange="togglePinDraft()"><label for="pin-checkbox">この投稿を「おすすめ」に固定する</label></div>'
     : '';
-
-  const canSubmit = draft.title || draft.categoryId; // 見た目のヒント用
 
   return '<div class="form-head">'+(ui.editingId?'お手本を編集する':'お手本を投稿する')+'<button class="form-close" onclick="closeForm()">×</button></div>'
     + '<div style="padding:20px;">'
@@ -752,8 +794,7 @@ function renderCategories(){
 }
 
 function renderStats(){
-  const user = currentUser();
-  if(!user || user.role!=='admin') return renderHome();
+  if(me().role!=='admin') return renderHome();
   const s = computeStats();
   const maxStoreCount = Math.max(1, ...s.byStore.map(x=>x.count));
   return '<div class="topbar"><button class="back-btn" onclick="goMyPage()">←</button><h1 style="margin-top:10px;">集計</h1><p class="sub">経営サイドのみ表示</p></div>'
@@ -773,40 +814,75 @@ function renderStats(){
 }
 
 function renderSaved(){
-  const user = currentUser();
-  const ids = data.saved[user.id] || [];
-  const posts = data.posts.filter(p=>ids.includes(p.id));
+  const posts = data.posts.filter(p=>isSaved(p.id));
   return '<div class="topbar"><h1>保存したお手本</h1><p class="sub">'+posts.length+'件</p></div>'
-    + (posts.length ? posts.map(p=>{
-        const author = data.accounts.find(a=>a.id===p.authorId);
-        return '<div class="post-card" onclick="openDetail(\''+p.id+'\')">'
-          + '<div class="post-title">'+esc(p.title)+'</div>'
-          + '<div class="post-meta"><span class="cat-chip">'+esc(findCategory(p.categoryId)?.name||'')+'</span><span class="author-tag">'+esc(author?author.name:'')+'</span></div>'
-          + '</div>';
-      }).join('')
-      : '<div class="empty">まだ保存したお手本はありません</div>');
+    + (posts.length ? posts.map(postCard).join('') : '<div class="empty">まだ保存したお手本はありません</div>');
 }
 
 function renderMyPage(){
-  const user = currentUser();
+  const user = me();
   const myPosts = data.posts.filter(p=>p.authorId===user.id);
   return '<div class="topbar"><h1>マイページ</h1></div>'
-    + '<div class="profile-card"><div><div class="name">'+esc(user.name)+'</div><div class="role">'+esc(storeName(user.storeId))+'／'+(user.role==='admin'?'経営サイド':user.role==='manager'?'店長':'社員')+'</div></div><button class="logout-btn" onclick="logout()">出る</button></div>'
-    + (user.role==='admin' ? '<div class="stats-link" onclick="goStats()">集計を見る（経営サイド向け）<span>→</span></div>' : '')
+    + '<div class="profile-card"><div><div class="name">'+esc(user.name)+'</div><div class="role">'+esc(storeName(user.storeId))+'／'+roleName(user.role)+'／ID：'+esc(user.loginId)+'</div></div><button class="logout-btn" onclick="logout()">出る</button></div>'
+    + (user.role==='admin' ? '<div class="stats-link" onclick="goStats()">集計を見る（経営サイド向け）<span>→</span></div>'
+      + '<div class="stats-link" onclick="goAdmin()">アカウント・店舗の管理<span>→</span></div>' : '')
+    + '<div class="stats-link" onclick="goChangePw()">パスワードを変更する<span>→</span></div>'
     + '<div class="section"><div class="section-head"><div class="title">自分の投稿</div><div class="count">'+myPosts.length+'件</div></div></div>'
-    + (myPosts.length ? myPosts.map(p=>
-        '<div class="post-card" onclick="openDetail(\''+p.id+'\')">'
-        + '<div class="post-title">'+esc(p.title)+'</div>'
-        + '<div class="post-meta"><span class="cat-chip">'+esc(findCategory(p.categoryId)?.name||'')+'</span></div>'
-        + '<div class="divider"></div>'
-        + '<div class="post-footer"><span>いいね '+p.reactions.like.length+'　閲覧 '+p.views+'</span><span>'+fmtDate(p.createdAt)+'</span></div>'
-        + '</div>'
-      ).join('')
-      : '<div class="empty">まだ投稿がありません</div>');
+    + (myPosts.length ? myPosts.map(postCard).join('') : '<div class="empty">まだ投稿がありません</div>');
+}
+
+function storeOptions(selected){
+  return data.stores.map(s=>'<option value="'+esc(s.id)+'" '+(s.id===selected?'selected':'')+'>'+esc(s.name)+'</option>').join('');
+}
+function roleOptions(selected){
+  return ['staff','manager','admin'].map(r=>'<option value="'+r+'" '+(r===selected?'selected':'')+'>'+roleName(r)+'</option>').join('');
+}
+
+function renderAdmin(){
+  if(me().role!=='admin') return renderHome();
+  const issued = ui.issued ? '<div class="issued">'
+    + (ui.issued.reset?'パスワードを再発行しました。':'アカウントを作りました。')+'次の内容を<strong>'+esc(ui.issued.name)+'</strong> さんに伝えてください。<br>'
+    + 'ID：<b>'+esc(ui.issued.loginId)+'</b><br>パスワード：<b>'+esc(ui.issued.password)+'</b><br>'
+    + '<span style="font-size:11.5px;color:#8a6a1f;">この画面を閉じると、パスワードはもう表示されません。最初のログインのときに、本人が新しいパスワードに変更します。</span></div>' : '';
+
+  const users = ui.adminUsers;
+  const userRows = !users ? '<div class="empty">読み込み中…</div>' : users.map(u=>{
+    const badges = (u.active?'':'<span class="status-off">利用停止</span>') + (u.active && u.mustChange?'<span class="status-wait">初回ログイン前</span>':'');
+    const row = '<div class="admin-row"><div class="main"><div class="name">'+esc(u.name)+badges+'</div>'
+      + '<div class="sub">ID：'+esc(u.loginId)+'／'+roleName(u.role)+(u.role!=='admin'?'／'+esc(storeName(u.storeId)):'')+'</div></div>'
+      + '<button onclick="startEditUser(\''+u.id+'\')">'+(ui.adminEditing===u.id?'閉じる':'変更')+'</button></div>';
+    if(ui.adminEditing!==u.id) return row;
+    return row + '<div class="edit-box">'
+      + '<div class="field"><label>名前</label><input id="eu-name" type="text" value="'+esc(u.name)+'"></div>'
+      + '<div class="field"><label>役割</label><select id="eu-role">'+roleOptions(u.role)+'</select></div>'
+      + '<div class="field"><label>店舗（経営サイドは不要）</label><select id="eu-store">'+storeOptions(u.storeId)+'</select></div>'
+      + '<div class="field"><label>パスワードの再発行（忘れたときだけ）</label><div class="pw-gen"><input id="eu-pw" type="text" autocomplete="off" placeholder="空のままなら変更しません"><button type="button" onclick="genPassword(\'eu-pw\')">自動で作る</button></div></div>'
+      + '<div class="checkbox-row"><input type="checkbox" id="eu-active" '+(u.active?'checked':'')+'><label for="eu-active">このアカウントを使えるようにする（外すと利用停止）</label></div>'
+      + '<button class="btn-primary" onclick="saveUser(\''+u.id+'\')">保存する</button>'
+      + '</div>';
+  }).join('');
+
+  const storeRows = data.stores.map(s=>'<div class="admin-row"><div class="main"><div class="name">'+esc(s.name)+'</div></div><button onclick="renameStore(\''+s.id+'\')">名前を変更</button></div>').join('');
+
+  return '<div class="topbar"><button class="back-btn" onclick="goMyPage()">←</button><h1 style="margin-top:10px;">アカウント・店舗の管理</h1><p class="sub">経営サイドのみ表示</p></div>'
+    + '<div style="height:14px;"></div>'
+    + issued
+    + '<div class="block"><h3>アカウントを追加する</h3>'
+    + '<div class="field"><label>ID（半角英数字。ログインに使います）</label><input id="nu-id" type="text" autocapitalize="off" autocomplete="off" placeholder="例：shibuya-yamada"></div>'
+    + '<div class="field"><label>名前（画面に表示されます）</label><input id="nu-name" type="text" placeholder="例：渋谷店 山田"></div>'
+    + '<div class="field"><label>役割</label><select id="nu-role">'+roleOptions('staff')+'</select></div>'
+    + '<div class="field"><label>店舗（経営サイドは不要）</label><select id="nu-store">'+storeOptions(null)+'</select></div>'
+    + '<div class="field"><label>最初のパスワード（8文字以上）</label><div class="pw-gen"><input id="nu-pw" type="text" autocomplete="off"><button type="button" onclick="genPassword(\'nu-pw\')">自動で作る</button></div></div>'
+    + '<button class="btn-primary" onclick="addUser()">追加する</button>'
+    + '</div>'
+    + '<div class="block"><h3>アカウント一覧（'+(users?users.length:0)+'人）</h3>'+userRows+'</div>'
+    + '<div class="block"><h3>店舗</h3>'+storeRows
+    + '<div class="add-cat-box"><input id="new-store-input" type="text" placeholder="追加する店舗名"><button type="button" onclick="addStore()">追加</button></div>'
+    + '</div>';
 }
 
 /* ============ 起動 ============ */
-render();
+boot();
 </script>
 </body>
 </html>

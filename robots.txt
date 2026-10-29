@@ -1,0 +1,4 @@
+# Crawling is intentionally allowed: the noindex signal (meta tag / X-Robots-Tag header)
+# can only be read if crawlers are allowed to fetch the pages.
+User-agent: *
+Allow: /

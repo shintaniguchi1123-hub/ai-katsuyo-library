@@ -86,8 +86,9 @@ function safeEqual(a, b) {
   return r === 0;
 }
 
+// 検索に出さない印（noindex）を、サーバーの返す情報にも付ける
 function json(body, status = 200, headers = {}) {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', ...headers } });
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex', ...headers } });
 }
 
 class HttpError extends Error {
@@ -294,7 +295,7 @@ async function handle(request, env) {
     const row = await db.prepare('SELECT data FROM photos WHERE id = ?').bind(id).first();
     if (!row) fail(404, '写真が見つかりません');
     const m = row.data.match(/^data:(image\/[a-z]+);base64,(.*)$/);
-    return new Response(fromB64(m[2]), { headers: { 'Content-Type': m[1], 'Cache-Control': 'private, max-age=31536000, immutable' } });
+    return new Response(fromB64(m[2]), { headers: { 'Content-Type': m[1], 'Cache-Control': 'private, max-age=31536000, immutable', 'X-Robots-Tag': 'noindex' } });
   }
 
   /* ここから先はログインが必要 */
